@@ -1,0 +1,52 @@
+---
+title: "Lineage Tracing"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(LINEAGE)
+library(tidyverse)
+mt_data=read.table("./mtMatrix_p1.txt")
+result=lineage(data = mt_data, repeats = 30, thread = 20)
+
+load("./all_results.Rdata")
+load("./TF1_clone/TF1_clones.rda")
+
+meta_data = read.table("./SraRunTable.txt", sep = ",", header = FALSE)
+meta_data_label =
+  meta_data %>%
+  select(V1, V16)
+
+mt_data_label = 
+  label %>%
+  separate(Sample, c(NA, "Run"), sep="_", remove = TRUE) 
+
+mt_data_label = mt_data_label[, c(2, 1)]
+  
+mt_data_p1_SRR_GSM = 
+  merge(meta_data, mt_data_label, by = 1) %>%
+  select(V1, V27, V28, Label)
+
+write.csv(mt_data_p1_SRR_GSM, file = "mt_data_p1_label_GSM_SRR.csv")
+  
+# The inferred clone labels are embedded in the returned result
+# as result$label. We also provide lineage_tree function to trace # the lineage tree of the returned result.
+hc=lineage_tree(result)
+str(hc, max.level = 1)
+
+label=all_results$label
+label_TF=TF1_clones$rlabel
+write.table(label_TF,file="label_TF.txt")
+
+plots0=traceplot(result, label)  #plots with reference clone labels
+plots=traceplot(result, result$label)  #plots with inferred clone labels
+png(file="./plots-tsne.png",
+width=1600, height=350)
+plots$d2d
+dev.off()
+png(file="./plots-heatmap.png",
+width=1600, height=350)
+plots$heatmap
+dev.off()
+```
+
